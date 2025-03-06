@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recipe Finder</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1, h2 { color: #333; }
+        .recipe, .meal, .item { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .recipe img, .meal img { max-width: 200px; }
+        .ingredients, .nutrients { margin-left: 20px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Recipe Finder App</h1>
+
+    <!-- Find recipes by ingredients -->
+    <h2>Recipes by Ingredients</h2>
+    <form id="ingredients-form">
+        <label>Enter ingredients (comma-separated):</label>
+        <input type="text" name="ingredients" placeholder="apples, flour, sugar">
+        <button type="submit">Search</button>
+    </form>
+    <div id="ingredients-result"></div>
+
+    <!-- Find recipes by nutrients -->
+    <h2>Recipes by Nutritional Requirements</h2>
+    <form id="nutrients-form">
+        <label>Min Calories:</label>
+        <input type="number" name="min_calories" value="100">
+        <label>Max Calories:</label>
+        <input type="number" name="max_calories" value="800">
+        <button type="submit">Search</button>
+    </form>
+    <div id="nutrients-result"></div>
+
+    <!-- Extract recipe from webpage -->
+    <h2>Extract Recipe from Webpage</h2>
+    <form id="extract-form">
+        <label>Enter webpage URL:</label>
+        <input type="text" name="url" placeholder="https://www.allrecipes.com/recipe/158968/">
+        <button type="submit">Extract</button>
+    </form>
+    <div id="extract-result"></div>
+
+    <!-- Generate meal plan -->
+    <h2>Generate Meal Plan</h2>
+    <form id="meal-plan-form">
+        <label>Diet:</label>
+        <input type="text" name="diet" value="vegetarian">
+        <label>Target Calories:</label>
+        <input type="number" name="targetCalories" value="2000">
+        <button type="submit">Generate</button>
+    </form>
+    <div id="meal-plan-result"></div>
+
+    <!-- Generate shopping list -->
+    <h2>Generate Shopping List</h2>
+    <form id="shopping-list-form">
+        <label>Enter ingredients:</label>
+        <input type="text" name="ingredients" placeholder="2 apples, 1 cup flour">
+        <button type="submit">Generate</button>
+    </form>
+    <div id="shopping-list-result"></div>
+
+    <!-- Classify recipe type or cuisine -->
+    <h2>Classify Recipe Type or Cuisine</h2>
+    <form id="classify-form">
+        <label>Recipe ID:</label>
+        <input type="number" name="recipe_id" placeholder="644387">
+        <button type="submit">Classify</button>
+    </form>
+    <div id="classify-result"></div>
+
+    <script>
+        function handleForm(formId, url, resultDivId) {
+            document.getElementById(formId).addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const jsonData = Object.fromEntries(formData.entries());
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const resultDiv = document.getElementById(resultDivId);
+                    if (data.error) {
+                        resultDiv.innerHTML = `<p class="error">Error: ${data.error}</p>`;
+                    } else if (formId === 'ingredients-form') {
+                        let html = `<p>Total Recipes Found: ${data["Total Recipes Found"]}</p>`;
+                        data.Recipes.forEach(recipe => {
+                            html += `
+                                <div class="recipe">
+                                    <h3>${recipe.Title}</h3>
+                                    <img src="${recipe.Image}" alt="${recipe.Title}">
+                                    <p><strong>Used Ingredients:</strong></p>
+                                    <ul class="ingredients">${recipe["Used Ingredients"].map(i => `<li>${i}</li>`).join('')}</ul>
+                                    <p><strong>Missed Ingredients:</strong></p>
+                                    <ul class="ingredients">${recipe["Missed Ingredients"].map(i => `<li>${i}</li>`).join('')}</ul>
+                                    <p>ID: ${recipe.ID}</p>
+                                </div>`;
+                        });
+                        resultDiv.innerHTML = html;
+                    } else if (formId === 'nutrients-form') {
+                        let html = `<p>Total Recipes Found: ${data["Total Recipes Found"]}</p>`;
+                        data.Recipes.forEach(recipe => {
+                            html += `
+                                <div class="recipe">
+                                    <h3>${recipe.Title}</h3>
+                                    <img src="${recipe.Image}" alt="${recipe.Title}">
+                                    <p><strong>Calories:</strong> ${recipe.Calories}</p>
+                                    <p>ID: ${recipe.ID}</p>
+                                </div>`;
+                        });
+                        resultDiv.innerHTML = html;
+                    } else if (formId === 'extract-form') {
+                        let html = `
+                            <div class="recipe">
+                                <h3>${data.Title}</h3>
+                                <img src="${data.Image}" alt="${data.Title}">
+                                <p><strong>Source URL:</strong> <a href="${data["Source URL"]}">${data["Source URL"]}</a></p>
+                                <p><strong>Ingredients:</strong></p>
+                                <ul class="ingredients">${data.Ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+                                <p><strong>Instructions:</strong></p>
+                                <ol class="ingredients">${data.Instructions.map(i => `<li>${i}</li>`).join('')}</ol>
+                            </div>`;
+                        resultDiv.innerHTML = html;
+                    } else if (formId === 'meal-plan-form') {
+                        let html = `
+                            <p><strong>Diet:</strong> ${data.Diet}</p>
+                            <p><strong>Target Calories:</strong> ${data["Target Calories"]}</p>
+                            <p><strong>Total Nutrients:</strong></p>
+                            <ul class="nutrients">
+                                <li>Calories: ${data["Total Nutrients"].Calories}</li>
+                                <li>Protein: ${data["Total Nutrients"].Protein}</li>
+                                <li>Fat: ${data["Total Nutrients"].Fat}</li>
+                                <li>Carbohydrates: ${data["Total Nutrients"].Carbohydrates}</li>
+                            </ul>`;
+                        data.Meals.forEach(meal => {
+                            html += `
+                                <div class="meal">
+                                    <h3>${meal.Title}</h3>
+                                    <img src="${meal.Image}" alt="${meal.Title}">
+                                    <p><strong>Ready In:</strong> ${meal["Ready In"]}</p>
+                                    <p><strong>Servings:</strong> ${meal.Servings}</p>
+                                    <p>ID: ${meal.ID}</p>
+                                </div>`;
+                        });
+                        resultDiv.innerHTML = html;
+                    } else if (formId === 'shopping-list-form') {
+                        let html = `<p><strong>Servings:</strong> ${data.Servings}</p>`;
+                        html += '<h3>Shopping List</h3>';
+                        data["Shopping List"].forEach(item => {
+                            html += `
+                                <div class="item">
+                                    <p><strong>${item.Name}</strong></p>
+                                    <p>Amount: ${item.Amount}</p>
+                                    <p>Aisle: ${item.Aisle}</p>
+                                </div>`;
+                        });
+                        resultDiv.innerHTML = html;
+                    } else if (formId === 'classify-form') {
+                        let html = `
+                            <div class="recipe">
+                                <h3>${data["Recipe Title"]}</h3>
+                                <p><strong>Cuisine:</strong> ${data.Cuisine}</p>
+                                <p><strong>Dish Type:</strong> ${data["Dish Type"]}</p>
+                                <p>ID: ${data.ID}</p>
+                            </div>`;
+                        resultDiv.innerHTML = html;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        }
+
+        handleForm('ingredients-form', '/recipes/by-ingredients', 'ingredients-result');
+        handleForm('nutrients-form', '/recipes/by-nutrients', 'nutrients-result');
+        handleForm('extract-form', '/recipes/extract', 'extract-result');
+        handleForm('meal-plan-form', '/meal-plan', 'meal-plan-result');
+        handleForm('shopping-list-form', '/shopping-list', 'shopping-list-result');
+        handleForm('classify-form', '/recipes/classify', 'classify-result');
+    </script>
+</body>
+</html>
